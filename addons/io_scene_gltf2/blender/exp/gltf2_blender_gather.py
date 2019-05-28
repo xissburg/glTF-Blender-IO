@@ -49,7 +49,7 @@ def __gather_scene(blender_scene, export_settings):
 
     for blender_object in blender_scene.objects:
         if blender_object.parent is None:
-            node = gltf2_blender_gather_nodes.gather_node(blender_object, export_settings)
+            node = gltf2_blender_gather_nodes.gather_node(blender_object, None, export_settings)
             if node is not None:
                 scene.nodes.append(node)
 

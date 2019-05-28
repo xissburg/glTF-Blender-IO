@@ -31,7 +31,7 @@ from io_scene_gltf2.io.com import gltf2_io_extensions
 
 
 @cached
-def gather_node(blender_object, export_settings):
+def gather_node(blender_object, dupli_object_parent, export_settings):
     if not __filter_node(blender_object, export_settings):
         return None
 
@@ -95,20 +95,21 @@ def __gather_children(blender_object, export_settings):
             # as the object should be a child of the specific bone,
             # not the Armature object
             continue
-        node = gather_node(child_object, export_settings)
+        node = gather_node(child_object, None, export_settings)
         if node is not None:
             children.append(node)
     # blender dupli objects
+    # We invalidate the cache by passing name of object, to have multiple objects in exported file
     if bpy.app.version < (2, 80, 0):
         if blender_object.dupli_type == 'GROUP' and blender_object.dupli_group:
             for dupli_object in blender_object.dupli_group.objects:
-                node = gather_node(dupli_object, export_settings)
+                node = gather_node(dupli_object, blender_object.name, export_settings)
                 if node is not None:
                     children.append(node)
     else:
         if blender_object.instance_type == 'COLLECTION' and blender_object.instance_collection:
             for dupli_object in blender_object.instance_collection.objects:
-                node = gather_node(dupli_object, export_settings)
+                node = gather_node(dupli_object, blender_object.name, export_settings)
                 if node is not None:
                     children.append(node)
 
@@ -135,7 +136,7 @@ def __gather_children(blender_object, export_settings):
             parent_joint = find_parent_joint(root_joints, child.parent_bone)
             if not parent_joint:
                 continue
-            child_node = gather_node(child, export_settings)
+            child_node = gather_node(child, None, export_settings)
             if child_node is None:
                 continue
             blender_bone = blender_object.pose.bones[parent_joint.name]
