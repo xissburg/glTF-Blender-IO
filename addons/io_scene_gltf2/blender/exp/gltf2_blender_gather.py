@@ -48,7 +48,7 @@ def __gather_scene(blender_scene, export_settings):
     )
 
     for blender_object in blender_scene.objects:
-        if blender_object.parent is None:
+        if __is_root_object(blender_object, export_settings):
             node = gltf2_blender_gather_nodes.gather_node(blender_object, blender_scene, export_settings)
             if node is not None:
                 scene.nodes.append(node)
@@ -70,3 +70,16 @@ def __gather_extras(blender_object, export_settings):
     if export_settings[gltf2_blender_export_keys.EXTRAS]:
         return gltf2_blender_generate_extras.generate_extras(blender_object)
     return None
+
+
+def __is_root_object(blender_object, export_settings):
+    lod = blender_object.get("MSFT_lod")
+    if not export_settings["gltf_lod"] or lod is None:
+        return blender_object.parent is None
+    # If gltf_lod is enabled and the object has a LOD assigned, it is a root only if it has no parent
+    # and its LOD is 0. The other LODs of this object are considered a child (not in the `children`
+    # property btw)
+    return blender_object.parent is None and lod == 0
+    
+
+

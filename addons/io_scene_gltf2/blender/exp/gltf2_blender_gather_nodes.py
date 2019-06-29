@@ -105,6 +105,8 @@ def __gather_children(blender_object, blender_scene, export_settings):
             # as the object should be a child of the specific bone,
             # not the Armature object
             continue
+        if __is_lod_child(child_object, export_settings):
+                continue
         node = gather_node(child_object, blender_scene, export_settings)
         if node is not None:
             children.append(node)
@@ -141,11 +143,14 @@ def __gather_children(blender_object, blender_scene, export_settings):
                     return parent_joint
             return None
         for child in direct_bone_children:
+            if __is_lod_child(child, export_settings):
+                continue
             # find parent joint
             parent_joint = find_parent_joint(root_joints, child.parent_bone)
             if not parent_joint:
                 continue
-            child_node = gather_node(child, None, export_settings)
+            
+            child_node = gather_node(child, blender_scene, export_settings)
             if child_node is None:
                 continue
             blender_bone = blender_object.pose.bones[parent_joint.name]
@@ -199,7 +204,7 @@ def __gather_extensions(blender_object, blender_scene, export_settings):
                 }
             )
 
-    if export_settings["gltf_lod"] and blender_object["MSFT_lod"] == 0:
+    if export_settings["gltf_lod"] and blender_object.get("MSFT_lod") == 0 and blender_scene is not None:
         extensions["MSFT_lod"] = gltf2_io_extensions.Extension(
             name="MSFT_lod", 
             extension={
@@ -217,7 +222,7 @@ def __gather_extras(blender_object, blender_scene, export_settings):
     if export_settings['gltf_extras']:
         extras = gltf2_blender_generate_extras.generate_extras(blender_object)
 
-    if export_settings['gltf_lod'] and blender_object["MSFT_lod"] == 0 and blender_scene is not None:
+    if export_settings['gltf_lod'] and blender_object.get("MSFT_lod") == 0 and blender_scene is not None:
         if extras is None:
             extras = {}
         extras["MSFT_screencoverage"] = __gather_MSFT_screencoverage(blender_object, blender_scene, export_settings)
@@ -384,16 +389,16 @@ def __gather_weights(blender_object, export_settings):
 
 
 def __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings):
-    lod_name = blender_object["MSFT_lod_name"]
+    lod_name = blender_object.get("MSFT_lod_name")
     if lod_name is None:
         raise RuntimeError("MSFT_lod_name not assigned to object %s" % __gather_name(blender_object, export_settings))
     lod_objects = []
     for other_blender_object in blender_scene.objects:
-        if other_blender_object["MSFT_lod_name"] == lod_name:
+        if other_blender_object.get("MSFT_lod_name") == lod_name:
             other_name = __gather_name(other_blender_object, export_settings)
-            if other_blender_object["MSFT_lod"] is None:
+            if other_blender_object.get("MSFT_lod") is None:
                 raise RuntimeError("MSFT_lod not assigned to object %s" % other_name)
-            if other_blender_object["MSFT_screencoverage"] is None:
+            if other_blender_object.get("MSFT_screencoverage") is None:
                 raise RuntimeError("MSFT_screencoverage not assigned to object %s" % other_name)
             lod_objects.append(other_blender_object)
     lod_objects = sorted(lod_objects, key=lambda obj: obj["MSFT_lod"])
@@ -411,6 +416,15 @@ def __gather_MSFT_lod_nodes(blender_object, blender_scene, export_settings):
     lod_objects.pop(0)
     lod_nodes = [gather_node(obj, blender_scene, export_settings) for obj in lod_objects]
     return lod_nodes
+
+
+def __is_lod_child(blender_object, export_settings):
+    if not export_settings["gltf_lod"]:
+        return False
+    # objects with a LOD are children of the corresponding object with LOD 0
+    # thus they must not be added as child of another node.
+    lod = blender_object.get("MSFT_lod")
+    return lod is not None and lod != 0
 
 
 def __get_correction_node(blender_object, export_settings):
