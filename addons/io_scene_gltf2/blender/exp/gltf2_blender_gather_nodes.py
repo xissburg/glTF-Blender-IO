@@ -41,8 +41,8 @@ def gather_node(blender_object, blender_scene, export_settings):
     node = gltf2_io.Node(
         camera=__gather_camera(blender_object, export_settings),
         children=__gather_children(blender_object, blender_scene, export_settings),
-        extensions=__gather_extensions(blender_object, export_settings),
-        extras=__gather_extras(blender_object, export_settings),
+        extensions=__gather_extensions(blender_object, blender_scene, export_settings),
+        extras=__gather_extras(blender_object, blender_scene, export_settings),
         matrix=__gather_matrix(blender_object, export_settings),
         mesh=__gather_mesh(blender_object, export_settings),
         name=__gather_name(blender_object, export_settings),
@@ -177,7 +177,7 @@ def __gather_children(blender_object, blender_scene, export_settings):
     return children
 
 
-def __gather_extensions(blender_object, export_settings):
+def __gather_extensions(blender_object, blender_scene, export_settings):
     extensions = {}
 
     if export_settings["gltf_lights"] and (blender_object.type == "LAMP" or blender_object.type == "LIGHT"):
@@ -199,13 +199,30 @@ def __gather_extensions(blender_object, export_settings):
                 }
             )
 
+    if export_settings["gltf_lod"] and blender_object["MSFT_lod"] == 0:
+        extensions["MSFT_lod"] = gltf2_io_extensions.Extension(
+            name="MSFT_lod", 
+            extension={
+                "ids": __gather_MSFT_lod_nodes(blender_object, blender_scene, export_settings)
+            },
+            required=False
+        )
+
     return extensions if extensions else None
 
 
-def __gather_extras(blender_object, export_settings):
+def __gather_extras(blender_object, blender_scene, export_settings):
+    extras = None
+
     if export_settings['gltf_extras']:
-        return gltf2_blender_generate_extras.generate_extras(blender_object)
-    return None
+        extras = gltf2_blender_generate_extras.generate_extras(blender_object)
+
+    if export_settings['gltf_lod'] and blender_object["MSFT_lod"] == 0 and blender_scene is not None:
+        if extras is None:
+            extras = {}
+        extras["MSFT_screencoverage"] = __gather_MSFT_screencoverage(blender_object, blender_scene, export_settings)
+
+    return extras
 
 
 def __gather_matrix(blender_object, export_settings):
@@ -364,6 +381,36 @@ def __gather_skin(blender_object, export_settings):
 
 def __gather_weights(blender_object, export_settings):
     return None
+
+
+def __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings):
+    lod_name = blender_object["MSFT_lod_name"]
+    if lod_name is None:
+        raise RuntimeError("MSFT_lod_name not assigned to object %s" % __gather_name(blender_object, export_settings))
+    lod_objects = []
+    for other_blender_object in blender_scene.objects:
+        if other_blender_object["MSFT_lod_name"] == lod_name:
+            other_name = __gather_name(other_blender_object, export_settings)
+            if other_blender_object["MSFT_lod"] is None:
+                raise RuntimeError("MSFT_lod not assigned to object %s" % other_name)
+            if other_blender_object["MSFT_screencoverage"] is None:
+                raise RuntimeError("MSFT_screencoverage not assigned to object %s" % other_name)
+            lod_objects.append(other_blender_object)
+    lod_objects = sorted(lod_objects, key=lambda obj: obj["MSFT_lod"])
+    return lod_objects
+
+
+def __gather_MSFT_screencoverage(blender_object, blender_scene, export_settings):
+    lod_objects = __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings)
+    screencoverage = [obj["MSFT_screencoverage"] for obj in lod_objects]
+    return screencoverage
+
+
+def __gather_MSFT_lod_nodes(blender_object, blender_scene, export_settings):
+    lod_objects = __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings)
+    lod_objects.pop(0)
+    lod_nodes = [gather_node(obj, blender_scene, export_settings) for obj in lod_objects]
+    return lod_nodes
 
 
 def __get_correction_node(blender_object, export_settings):

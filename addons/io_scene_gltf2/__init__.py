@@ -299,6 +299,13 @@ class ExportGLTF2_Base:
         default=False
     )
 
+    export_lod = BoolProperty(
+        name='Levels of Detail',
+        description='Export Levels of Detail (LOD). '
+                    'Uses "MSFT_lod" glTF extension',
+        default=False
+    )
+
     will_save_settings = BoolProperty(
         name='Remember Export Settings',
         description='Store glTF export settings in the Blender project',
@@ -404,6 +411,7 @@ class ExportGLTF2_Base:
 
         export_settings['gltf_lights'] = self.export_lights
         export_settings['gltf_displacement'] = self.export_displacement
+        export_settings['gltf_lod'] = self.export_lod
 
         export_settings['gltf_binary'] = bytearray()
         export_settings['gltf_binaryfilename'] = os.path.splitext(os.path.basename(
@@ -455,6 +463,8 @@ class ExportGLTF2_Base:
                 col.prop(self, 'export_draco_position_quantization')
                 col.prop(self, 'export_draco_normal_quantization')
                 col.prop(self, 'export_draco_texcoord_quantization')
+
+        col.prop(self, 'export_lod')
 
     def draw_object_settings(self):
         col = self.layout.box().column()
