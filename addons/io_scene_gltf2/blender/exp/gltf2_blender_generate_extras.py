@@ -27,8 +27,8 @@ def generate_extras(blender_element):
     # Custom properties, which are in most cases present and should not be exported.
     black_list = ['cycles', 'cycles_visibility', 'cycles_curves', '_RNA_UI']
 
-    # Do not include the MSFT_lod extension properties. These are handled in gather_node
-    black_list += ['MSFT_lod', 'MSFT_lod_name', 'MSFT_screencoverage']
+    # Do not include the LOD properties.
+    black_list += ['glTF_LOD', 'glTF_LOD_parent_object']
 
     count = 0
     for custom_property in blender_element.keys():

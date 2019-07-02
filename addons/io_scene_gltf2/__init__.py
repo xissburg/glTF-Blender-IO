@@ -61,6 +61,8 @@ from bpy.props import (StringProperty,
 from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 from io_scene_gltf2.io.exp import gltf2_io_draco_compression_extension
+from io_scene_gltf2 import panel
+from io_scene_gltf2 import operators
 
 
 #
@@ -583,7 +585,14 @@ def menu_func_import(self, context):
 
 classes = (
     ExportGLTF2,
-    ImportGLTF2
+    ImportGLTF2,
+    operators.GLTFLODEntry,
+    operators.GLTFLOD,
+    operators.OBJECT_OT_AddLod,
+    operators.OBJECT_OT_DeleteLod,
+    operators.OBJECT_OT_SelectParentLod,
+    panel.PANEL_PT_gltf,
+    panel.PANEL_PT_gltf_lod
 )
 
 
@@ -599,6 +608,8 @@ def register():
     else:
         bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
         bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
+    # LOD properties
+    operators.register_lod_properties()
 
 
 def unregister():
@@ -613,3 +624,5 @@ def unregister():
     else:
         bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
         bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+    # Remove LOD properties
+    operators.unregister_lod_properties()

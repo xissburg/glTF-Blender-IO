@@ -73,13 +73,11 @@ def __gather_extras(blender_object, export_settings):
 
 
 def __is_root_object(blender_object, export_settings):
-    lod = blender_object.get("MSFT_lod")
-    if not export_settings["gltf_lod"] or lod is None:
+    if not export_settings["gltf_lod"] or blender_object.type != 'MESH':
         return blender_object.parent is None
-    # If gltf_lod is enabled and the object has a LOD assigned, it is a root only if it has no parent
-    # and its LOD is 0. The other LODs of this object are considered a child (not in the `children`
-    # property btw)
-    return blender_object.parent is None and lod == 0
+    # If gltf_lod is enabled also check if this object is in a LOD chain and is not LOD 0,
+    # i.e. it has a parent LOD.
+    return blender_object.parent is None and blender_object.glTF_LOD_parent_object is None
     
 
 

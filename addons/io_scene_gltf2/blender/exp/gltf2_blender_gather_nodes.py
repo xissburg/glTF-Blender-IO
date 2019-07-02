@@ -106,7 +106,7 @@ def __gather_children(blender_object, blender_scene, export_settings):
             # not the Armature object
             continue
         if __is_lod_child(child_object, export_settings):
-                continue
+            continue
         node = gather_node(child_object, blender_scene, export_settings)
         if node is not None:
             children.append(node)
@@ -204,11 +204,11 @@ def __gather_extensions(blender_object, blender_scene, export_settings):
                 }
             )
 
-    if export_settings["gltf_lod"] and blender_object.get("MSFT_lod") == 0 and blender_scene is not None:
+    if export_settings["gltf_lod"] and len(blender_object.glTF_LOD.entries) > 0 and blender_scene is not None:
         extensions["MSFT_lod"] = gltf2_io_extensions.Extension(
             name="MSFT_lod", 
             extension={
-                "ids": __gather_MSFT_lod_nodes(blender_object, blender_scene, export_settings)
+                "ids": __gather_lod_children(blender_object, blender_scene, export_settings)
             },
             required=False
         )
@@ -222,10 +222,10 @@ def __gather_extras(blender_object, blender_scene, export_settings):
     if export_settings['gltf_extras']:
         extras = gltf2_blender_generate_extras.generate_extras(blender_object)
 
-    if export_settings['gltf_lod'] and blender_object.get("MSFT_lod") == 0 and blender_scene is not None:
+    if export_settings['gltf_lod'] and len(blender_object.glTF_LOD.entries) > 0 and blender_scene is not None:
         if extras is None:
             extras = {}
-        extras["MSFT_screencoverage"] = __gather_MSFT_screencoverage(blender_object, blender_scene, export_settings)
+        extras["MSFT_screencoverage"] = __gather_lod_screen_coverages(blender_object, blender_scene, export_settings)
 
     return extras
 
@@ -388,32 +388,14 @@ def __gather_weights(blender_object, export_settings):
     return None
 
 
-def __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings):
-    lod_name = blender_object.get("MSFT_lod_name")
-    if lod_name is None:
-        raise RuntimeError("MSFT_lod_name not assigned to object %s" % __gather_name(blender_object, export_settings))
-    lod_objects = []
-    for other_blender_object in blender_scene.objects:
-        if other_blender_object.get("MSFT_lod_name") == lod_name:
-            other_name = __gather_name(other_blender_object, export_settings)
-            if other_blender_object.get("MSFT_lod") is None:
-                raise RuntimeError("MSFT_lod not assigned to object %s" % other_name)
-            if other_blender_object.get("MSFT_screencoverage") is None:
-                raise RuntimeError("MSFT_screencoverage not assigned to object %s" % other_name)
-            lod_objects.append(other_blender_object)
-    lod_objects = sorted(lod_objects, key=lambda obj: obj["MSFT_lod"])
-    return lod_objects
+def __gather_lod_screen_coverages(blender_object, blender_scene, export_settings):
+    screen_coverages = [blender_object.glTF_LOD.screen_coverage_lod_0]
+    screen_coverages += [entry.screen_coverage for entry in blender_object.glTF_LOD.entries]
+    return screen_coverages
 
 
-def __gather_MSFT_screencoverage(blender_object, blender_scene, export_settings):
-    lod_objects = __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings)
-    screencoverage = [obj["MSFT_screencoverage"] for obj in lod_objects]
-    return screencoverage
-
-
-def __gather_MSFT_lod_nodes(blender_object, blender_scene, export_settings):
-    lod_objects = __gather_MSFT_lod_blender_objects(blender_object, blender_scene, export_settings)
-    lod_objects.pop(0)
+def __gather_lod_children(blender_object, blender_scene, export_settings):
+    lod_objects = [entry.child_object for entry in blender_object.glTF_LOD.entries]
     lod_nodes = [gather_node(obj, blender_scene, export_settings) for obj in lod_objects]
     return lod_nodes
 
@@ -421,10 +403,7 @@ def __gather_MSFT_lod_nodes(blender_object, blender_scene, export_settings):
 def __is_lod_child(blender_object, export_settings):
     if not export_settings["gltf_lod"]:
         return False
-    # objects with a LOD are children of the corresponding object with LOD 0
-    # thus they must not be added as child of another node.
-    lod = blender_object.get("MSFT_lod")
-    return lod is not None and lod != 0
+    return blender_object.glTF_LOD_parent_object is not None
 
 
 def __get_correction_node(blender_object, export_settings):
