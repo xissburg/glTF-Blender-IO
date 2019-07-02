@@ -72,3 +72,8 @@ To run the tests locally, your system should be modified to include `blender279b
 The latest version of [Yarn](https://yarnpkg.com/en/) should also be installed.
 
 Then, in the `tests` folder of this repository, run `yarn install`, followed by `yarn run test`.  You can limit the test suite to one version of Blender with `yarn run test-blender279b` or `yarn run test-blender28`.
+
+MSFT_lod Extension
+------------------
+
+To setup LODs for export using the [MSFT_lod extension](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/MSFT_lod), select the high definition model (LOD 0) and go to the _Properties_ panel, _Object_ tab and you'll find a _glTF_ panel. Inside of it you'll find a _Levels of Detail_ section with an _Add LOD_ button. Click _Add LOD_ and a new LOD entry will be created. Then pick the LOD 1 object and adjust its _Screen Coverage_ property. Repeat for the other LODs. You should also set the LOD 0 screen converage property at the top, since LOD 0 is drawn from values 1 until the value set in this field. LOD preview is not supported in the Blender viewport yet.
